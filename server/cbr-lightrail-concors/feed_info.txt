@@ -1,0 +1,2 @@
+feed_publisher_name,feed_publisher_url,feed_contact_url,feed_lang,feed_start_date,feed_end_date,feed_version
+"Canberra Metro Operations","https://www.transport.act.gov.au/","https://www.transport.act.gov.au/contact-us","EN","20250120","20250329","20250322"

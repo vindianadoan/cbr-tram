@@ -1,0 +1,28 @@
+:root{
+  --metro-red:#e4002b;
+  --metro-dark:#2b2b2b;
+  --metro-grey:#f2f2f2;
+  --metro-accent:#ff7f41;
+}
+
+#root{ max-width:720px; margin:0 auto; padding:2rem }
+
+.app{ display:flex; flex-direction:column; gap:1.25rem; color:var(--metro-dark) }
+.header{ display:flex; justify-content:space-between; align-items:center; border-bottom:4px solid var(--metro-red); padding-bottom:.5rem }
+.brand{ font-weight:800; letter-spacing:.5px; color:var(--metro-red) }
+.title{ font-size:1.1rem; font-weight:600 }
+.main{ display:flex; flex-direction:column; gap:.75rem }
+.label{ font-size:.9rem; color:#555 }
+.select{ appearance:auto; -webkit-appearance: menulist; padding:.65rem .8rem; border:2px solid var(--metro-dark); border-radius:6px; background:white; color:var(--metro-dark) }
+.select:focus{ outline:3px solid rgba(228,0,43,.25) }
+.actions{ display:flex; align-items:center; gap:.75rem }
+.btn{ padding:.55rem .9rem; border:0; background:var(--metro-red); color:white; font-weight:700; border-radius:6px; cursor:pointer }
+.btn:disabled{ opacity:.6; cursor:default }
+.updated{ font-size:.85rem; color:#666 }
+.selected{ font-size:.9rem; color:#444 }
+.countdowns{ display:grid; grid-template-columns: 1fr; gap:1.25rem; margin-top:1rem }
+.countdown{ font-size:5rem; font-weight:900; letter-spacing:1px; text-align:center; color:var(--metro-dark) }
+.dir{ font-size:.9rem; text-align:center; color:#666; margin-top:.25rem }
+.hint{ text-align:center; color:#666 }
+
+body{ background:var(--metro-grey) }

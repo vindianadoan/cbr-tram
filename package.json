@@ -1,0 +1,28 @@
+{
+  "name": "cbr-tram",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:server": "node server/src/index.js",
+    "dev:web": "npm run dev --workspace web",
+    "dev": "npm run dev:server & npm run dev:web"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vindianadoan/cbr-tram.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "bugs": {
+    "url": "https://github.com/vindianadoan/cbr-tram/issues"
+  },
+  "homepage": "https://github.com/vindianadoan/cbr-tram#readme"
+}

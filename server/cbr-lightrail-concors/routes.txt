@@ -1,0 +1,7 @@
+route_id,route_short_name,route_long_name,route_desc,route_type,route_color,route_text_color,route_url,agency_id
+"ACTO001","1","Alinga Street - Gungahlin Place","Light Rail full service","0","BD0021","FFFFFF","https://www.transport.act.gov.au/getting-around/timetables/routes-by-number","CMO"
+"NIS","NIS","Not in Service","Light Rail not in service","0","BD0021","FFFFFF","https://www.transport.act.gov.au/getting-around/timetables/routes-by-number","CMO"
+"X1","X1","Sandford Street - Gungahlin Place","Partial Light Rail service","0","BD0021","FFFFFF","https://www.transport.act.gov.au/getting-around/timetables/routes-by-number","CMO"
+"X2","X2","EPIC - Alinga Street","Partial Light Rail service","0","BD0021","FFFFFF","https://www.transport.act.gov.au/getting-around/timetables/routes-by-number","CMO"
+"X3","X3","Alinga Street - Dickson Avenue","Partial Light Rail service","0","BD0021","FFFFFF","https://www.transport.act.gov.au/getting-around/timetables/routes-by-number","CMO"
+"X4","X4","Dickson Avenue - Gungahlin Place","Partial Light Rail service","0","BD0021","FFFFFF","https://www.transport.act.gov.au/getting-around/timetables/routes-by-number","CMO"
