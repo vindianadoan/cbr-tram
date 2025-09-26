@@ -324,8 +324,8 @@ app.get('/api/departures', async (req, res) => {
   res.json({ stopId, next, nexts: Array.isArray(nexts) ? nexts : [] });
 });
 
-app.listen(PORT, () => {
-  logger.info(`Server listening on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  logger.info(`Server listening on port ${PORT}`);
 });
 
 // Basic fallback: assume a train every 6 minutes; compute next minute mark

@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, LayerGroup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 type Stop = { id: string; name: string }
 type Arrival = { epochSeconds: number; secondsAway: number; source?: 'realtime' | 'fallback'; directionId?: number }
-type NextResponse = { next?: Arrival; nexts?: Arrival[] }
 
 function App() {
   const [stops, setStops] = useState<Stop[]>([])
@@ -15,11 +14,14 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<number | null>(null)
   const [source, setSource] = useState<'realtime' | 'fallback' | undefined>(undefined)
-  const [stopsFull, setStopsFull] = useState<Array<{id:string; name:string; lat:number; lon:number}>>([])
   const [vehicles, setVehicles] = useState<Array<{id:string; lat:number; lon:number; directionId?:number; stopId?:string}>>([])
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false)
+  const [mapCenter, setMapCenter] = useState<[number, number]>([-35.28, 149.13])
+  const [mapZoom, setMapZoom] = useState(12)
 
   useEffect(() => {
-    fetch('/api/stops')
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+    fetch(`${apiUrl}/api/stops`)
       .then((r) => r.json())
       .then((data) => {
         setStops(data)
@@ -28,19 +30,25 @@ function App() {
       .catch(() => setError('Failed to load stops'))
   }, [])
 
-  // Load map data (stops with coords) once
-  useEffect(() => {
-    fetch('/api/stops-full').then(r=>r.json()).then(setStopsFull).catch(()=>{})
-  }, [])
+
+  // Force-refresh vehicle layer when set changes (prevents ghost pins)
+  const vehiclesLayerKey = useMemo(() => {
+    return vehicles.map(v => v.id).join(',')
+  }, [vehicles])
 
   // Poll vehicle positions every 10s
   useEffect(() => {
     let cancelled = false
     async function loadVehicles(){
       try {
-        const r = await fetch('/api/vehicles')
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+        const r = await fetch(`${apiUrl}/api/vehicles`)
         const j = await r.json()
-        if (!cancelled) setVehicles(j)
+        if (!cancelled) {
+          // Clear vehicles first, then set new ones to force re-render
+          setVehicles([])
+          setTimeout(() => setVehicles(j), 10)
+        }
       } catch{}
     }
     loadVehicles()
@@ -53,8 +61,9 @@ function App() {
     if (showLoading) setLoading(true)
     setError(null)
     try {
-      const r = await fetch(`/api/departures?stopId=${encodeURIComponent(stopId)}`)
-      const json: NextResponse = await r.json()
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+      const r = await fetch(`${apiUrl}/api/departures?stopId=${encodeURIComponent(stopId)}`)
+      const json = await r.json()
       const list = (json?.nexts ?? (json?.next ? [json.next] : [])) as Arrival[]
       setTargets(list)
       setSource(list[0]?.source)
@@ -113,11 +122,13 @@ function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <div className="brand">Canberra Metro</div>
-        <div className="title">Next Light Rail</div>
-      </header>
-      <main className="main">
+      {!isMapFullscreen && (
+        <>
+          <header className="header">
+            <div className="brand">Canberra Metro</div>
+            <div className="title">Next Light Rail</div>
+          </header>
+          <main className="main">
         <label className="label" htmlFor="stop-select">Select stop</label>
         <select
           id="stop-select"
@@ -147,12 +158,15 @@ function App() {
         ) : (
           <div className="countdowns">
             {targets.slice(0,2).map((t, i) => {
-              const dirLabel = t.directionId === 0 ? 'to City' : t.directionId === 1 ? 'to Gungahlin' : undefined
+              const selectedStopName = stops.find(s => s.id === selectedStop)?.name || ''
+              const dirLabel = selectedStopName.endsWith('1') ? 'To City' : 
+                              selectedStopName.endsWith('2') ? 'To Gungahlin' : 
+                              'Direction n/a'
               return (
                 <div key={i} className="countdown">
                   {loading && targets.length === 0 ? 'Loading…' : formatCountdown(t.epochSeconds)}
                   <div className="dir">
-                    {dirLabel || 'Direction n/a'} · {t.source === 'realtime' ? 'Live' : 'Fallback'}
+                    {dirLabel} · {t.source === 'realtime' ? 'Live' : 'Fallback'}
                   </div>
                 </div>
               )
@@ -162,24 +176,71 @@ function App() {
             )}
           </div>
         )}
-        <div className="hint">{source === 'realtime' ? 'Live data' : 'Estimated (fallback)'} · Auto-refresh every 15 seconds</div>
-      </main>
-      <div style={{ height: '420px', marginTop: '1.5rem', border: '2px solid #ddd', borderRadius: 8, overflow: 'hidden' }}>
-        <MapContainer center={[-35.28,149.13]} zoom={12} style={{ height: '100%', width: '100%' }}>
+            <div className="hint">{source === 'realtime' ? 'Live data' : 'Estimated (fallback)'} · Auto-refresh every 15 seconds</div>
+          </main>
+        </>
+      )}
+      <div className="map-container" style={{ 
+        height: isMapFullscreen ? '100vh' : '420px', 
+        marginTop: isMapFullscreen ? 0 : '1.5rem', 
+        border: isMapFullscreen ? 'none' : '2px solid #ddd', 
+        borderRadius: isMapFullscreen ? 0 : 8, 
+        overflow: 'hidden',
+        position: isMapFullscreen ? 'fixed' : 'relative',
+        top: isMapFullscreen ? 0 : 'auto',
+        left: isMapFullscreen ? 0 : 'auto',
+        width: isMapFullscreen ? '100vw' : 'auto',
+        zIndex: isMapFullscreen ? 1000 : 'auto'
+      }}>
+        <div className="map-controls" style={{ 
+          position: 'absolute', 
+          top: '10px', 
+          right: '10px', 
+          zIndex: 1001,
+          display: 'flex',
+          gap: '8px'
+        }}>
+          <button 
+            className="btn" 
+            onClick={() => setIsMapFullscreen(!isMapFullscreen)}
+            style={{ 
+              padding: '8px 12px', 
+              fontSize: '14px',
+              backgroundColor: isMapFullscreen ? '#dc3545' : '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            {isMapFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          </button>
+        </div>
+        <MapContainer 
+          center={mapCenter as any} 
+          zoom={mapZoom as any} 
+          style={{ height: '100%', width: '100%' }}
+          whenCreated={(mapInstance: any) => {
+            // Store map instance to preserve state
+            mapInstance.on('moveend', () => {
+              setMapCenter([mapInstance.getCenter().lat, mapInstance.getCenter().lng])
+            })
+            mapInstance.on('zoomend', () => {
+              setMapZoom(mapInstance.getZoom())
+            })
+          }}
+        >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            {...({attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'} as any)}
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {stopsFull.map(s => (
-            <Marker key={s.id} position={[s.lat, s.lon]}>
-              <Popup>{s.name} ({s.id})</Popup>
-            </Marker>
-          ))}
-          {vehicles.map(v => (
-            <Marker key={v.id} position={[v.lat, v.lon]}>
-              <Popup>LRV {v.id} {typeof v.directionId==='number' ? `· dir ${v.directionId}` : ''}</Popup>
-            </Marker>
-          ))}
+          <LayerGroup key={vehiclesLayerKey}>
+            {vehicles.map(v => (
+              <Marker key={`${v.id}-${v.lat}-${v.lon}`} position={[v.lat, v.lon]}>
+                <Popup>LRV {v.id} {typeof v.directionId==='number' ? `· dir ${v.directionId}` : ''}</Popup>
+              </Marker>
+            ))}
+          </LayerGroup>
         </MapContainer>
       </div>
     </div>
