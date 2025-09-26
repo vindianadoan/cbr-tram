@@ -2,6 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { MapContainer, TileLayer, Marker, Popup, LayerGroup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+
+// Fix for default markers in production
+delete (L.Icon.Default.prototype as any)._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+})
 
 type Stop = { id: string; name: string }
 type Arrival = { epochSeconds: number; secondsAway: number; source?: 'realtime' | 'fallback'; directionId?: number }
@@ -20,14 +29,32 @@ function App() {
   const [mapZoom, setMapZoom] = useState(12)
 
   useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+    // Try Railway backend first, fallback to local API
+    const railwayUrl = import.meta.env.VITE_API_URL
+    let apiUrl = railwayUrl || '/api'
+    
+    // Ensure URL has protocol if it's not a relative path
+    if (apiUrl && !apiUrl.startsWith('/') && !apiUrl.startsWith('http')) {
+      apiUrl = `https://${apiUrl}`
+    }
+    
+    console.log('Using API URL:', apiUrl)
+    
     fetch(`${apiUrl}/api/stops`)
-      .then((r) => r.json())
+      .then((r) => {
+        console.log('Stops response:', r.status, r.statusText)
+        if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`)
+        return r.json()
+      })
       .then((data) => {
+        console.log('Stops data:', data)
         setStops(data)
         if (data && data[0]) setSelectedStop(data[0].id)
       })
-      .catch(() => setError('Failed to load stops'))
+      .catch((err) => {
+        console.error('Failed to load stops:', err)
+        setError(`Failed to load stops: ${err.message}`)
+      })
   }, [])
 
 
@@ -41,7 +68,10 @@ function App() {
     let cancelled = false
     async function loadVehicles(){
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+        let apiUrl = import.meta.env.VITE_API_URL || '/api'
+        if (apiUrl && !apiUrl.startsWith('/') && !apiUrl.startsWith('http')) {
+          apiUrl = `https://${apiUrl}`
+        }
         const r = await fetch(`${apiUrl}/api/vehicles`)
         const j = await r.json()
         if (!cancelled) {
@@ -61,7 +91,10 @@ function App() {
     if (showLoading) setLoading(true)
     setError(null)
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+      let apiUrl = import.meta.env.VITE_API_URL || '/api'
+      if (apiUrl && !apiUrl.startsWith('/') && !apiUrl.startsWith('http')) {
+        apiUrl = `https://${apiUrl}`
+      }
       const r = await fetch(`${apiUrl}/api/departures?stopId=${encodeURIComponent(stopId)}`)
       const json = await r.json()
       const list = (json?.nexts ?? (json?.next ? [json.next] : [])) as Arrival[]
